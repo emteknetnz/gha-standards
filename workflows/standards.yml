@@ -1,13 +1,13 @@
-name: Keepalive
+name: Standards
 on:
   # Run on a schedule of once per month at 3pm UTC / 3am NZST
   schedule:
-    - cron: '0 15 1 * *'
+    - cron: '<cron>'
   workflow_dispatch:
 jobs:
-  keepalive:
-    name: Keepalive
+  standards:
+    name: Standards
     runs-on: ubuntu-latest
     steps:
-      - name: Keepalive
-        uses: silverstripe/gha-keepalive@v1
+      - name: Standards
+        uses: silverstripe/gha-standards@v1

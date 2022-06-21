@@ -13,11 +13,33 @@ const SAT = 6;
 const SUN = 7;
 const DAILY = 99;
 
-function cron($hourStrNZST, $day) {
+// ci | keepalive | standards
+global $mode;
+
+function cron($hourStrNZT, $day) {
     // e.g. NZST of '11pm', SAT
     // hour is passed as NZST, though needs to be converted to UTC
-    $am = strpos($hourStrNZST, 'am') !== false;
-    $hour = preg_replace('/[^0-9]/', '', $hourStrNZST);
+    global $mode;
+    list($hour, $day) = nztToUtc($hourStrNZT, $day);
+    if ($mode == 'ci') {
+        if ($day > 50) {
+            // daily
+            return sprintf('0 %d * * *', $hour);
+        } else {
+            // normal - once per week on a particular day
+            return sprintf('0 %d * * %d', $hour, $day);
+        }
+    } else {
+        // keepalive + standards
+        // run once per month, defaults to the 1st of the month 
+        return sprintf('0 %d 1 * *', $hour);
+    }
+}
+
+function nztToUtc($hourStrNZT, $day) {
+    // note this is UTC to NZST, NZDT (daylight savings time) is not considered
+    $am = strpos($hourStrNZT, 'am') !== false;
+    $hour = preg_replace('/[^0-9]/', '', $hourStrNZT);
     if ($am) {
         // e.g. NZST 11am SAT = UTC hour 23 SAT
         $hour += 12;
@@ -32,23 +54,24 @@ function cron($hourStrNZST, $day) {
             $day = 1;
         }
     }
-    if ($day > 50) {
-        // daily
-        return sprintf('0 %d * * *', $hour);
-    } else {
-        // once per week on a particular day
-        return sprintf('0 %d * * %d', $hour, $day);
-    }
+    return [$hour, $day];
 }
 
-$fallback = cron('11pm', SAT);
+function ghrepoToDay($ghrepo) {
+    // generate a "predictable yet random" day between 1-28 based on $ghrepo string
+    return (preg_replace('/[^0-9]/', '', md5($ghrepo)) % 28) + 1;
+}
 
 $crons = [
+    cron('10pm', SAT) => [
+        // used if a ghrepo isn't defined anywhere
+        'fallback'
+    ],
     cron('3am', DAILY) => [
-        'silvertripe/recipe-kitchen-sink',
+        'silverstripe/recipe-kitchen-sink',
     ],
     cron('4am', DAILY) => [
-        'silvertripe/installer',
+        'silverstripe/silverstripe-installer',
     ],
     cron('11pm', SUN) => [
         'silverstripe/silverstripe-reports',
@@ -207,4 +230,32 @@ $crons = [
     ],
 ];
 
-print_r($crons);
+$mode = 'ci';
+$ghrepoToCiCron = [];
+foreach ($crons as $cron => $ghrepos) {
+    $minute = 0;
+    foreach ($ghrepos as $ghrepo) {
+        $ghrepoToCron[$ghrepo] = preg_replace('/^[0-9]+ /', "$minute ", $cron);
+        $minute += 10;
+    }
+}
+
+$mode = 'standards';
+$ghrepoToStandardsCron = [];
+foreach ($crons as $cron => $ghrepos) {
+    foreach ($ghrepos as $ghrepo) {
+        $day = ghrepoToDay($ghrepo);
+        // run on the 50th minute of an hour sometime between the 1st and the 28th of each month
+        $ghrepoToStandardsCron[$ghrepo] = preg_replace('/^0 ([0-9]+) 1 /', "55 $1 $day ", $cron);
+    }
+}
+
+$mode = 'keepalive';
+$ghrepoToKeepaliveCron = [];
+foreach ($crons as $cron => $ghrepos) {
+    foreach ($ghrepos as $ghrepo) {
+        $day = ghrepoToDay($ghrepo);
+        // run on the 55th minute of an hour sometime between the 1st and the 28th of each month
+        $ghrepoToKeepaliveCron[$ghrepo] = preg_replace('/^0 ([0-9]+) 1 /', "50 $1 $day ", $cron);
+    }
+}
