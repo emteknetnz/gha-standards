@@ -11,16 +11,17 @@ class WorkflowCreator
     private const SUN = 7;
     private const DAILY = 99;
 
-    private array $ghrepoToCron = [];
+    private array $ghrepoToCron;
 
     public function __construct()
     {
         $this->init();
     }
 
-    public function createWorkflow(string $workflow, string $ghrepo): string
+    public function createWorkflow(string $workflow, string $ghrepo, string $actionPath): string
     {
-        $str = file_get_contents("workflows/$workflow.yml");
+        $path = implode('/', array_filter([$actionPath, 'workflows', "$workflow.yml"]));
+        $str = file_get_contents($path);
         $cron = $this->getCron($workflow, $ghrepo);
         return str_replace('<cron>', $cron, $str);
     }

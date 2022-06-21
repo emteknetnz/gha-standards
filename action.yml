@@ -15,7 +15,8 @@ runs:
       run: |
         mkdir -p .github/workflows
         for WORKFLOW in ci standards keepalive; do
-          php ${{ github.action_path }}/create_workflow.php $WORKFLOW $GITHUB_REPOSITORY > .github/workflows/$WORKFLOW.yml
+          php ${{ github.action_path }}/create_workflow.php $WORKFLOW $GITHUB_REPOSITORY ${{ github.action_path }} \
+            > .github/workflows/$WORKFLOW.yml
         done
 
     - name: Evaluate diff
