@@ -21,7 +21,7 @@ class WorkflowCreator
     public function createWorkflow(string $workflow, string $ghrepo): string
     {
         $str = file_get_contents("workflows/$workflow.yml");
-        $cron = getCron($workflow, $ghrepo);
+        $cron = $this->getCron($workflow, $ghrepo);
         return str_replace('<cron>', $cron, $str);
     }
 
