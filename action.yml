@@ -1,5 +1,5 @@
 name: Standards
-description: Keeps modules up to a support standard
+description: Keeps modules up to the latest standards
 
 runs:
   using: composite
@@ -8,20 +8,25 @@ runs:
     - name: Checkout code
       uses: actions/checkout@7884fcad6b5d53d10323aee724dc68d8b9096a2e # v2.4.2
 
-    - name: Add or update workflows
+    - name: Update workflows
       shell: bash
       env:
         GITHUB_REPOSITORY: ${{ github.repository }}
       run: |
         mkdir -p .github/workflows
-        php ${{ github.action_path }}/create_workflow.php ci $GITHUB_REPOSITORY > .github/workflows/ci.yml
-        php ${{ github.action_path }}/create_workflow.php standards $GITHUB_REPOSITORY > .github/workflows/standards.yml
-        php ${{ github.action_path }}/create_workflow.php keepalive $GITHUB_REPOSITORY > .github/workflows/keepalive.yml
+        for WORKFLOW in ci standards keepalive; do
+          php ${{ github.action_path }}/create_workflow.php $WORKFLOW $GITHUB_REPOSITORY > .github/workflows/$WORKFLOW.yml
+        done
 
-    - name: Do we need a pull-request
+    - name: Evaluate diff
       shell: bash
       run: |
-        # git diff - if empty then exit(0)
+        if [[ $(git diff) == "" ]]; then
+          echo "git diff found no changes, exiting now"
+          exit 0
+        fi
+        echo "git diff found changes"
 
     - name: Pull-request
       uses: silverstripe/pull-request@v1
+      
