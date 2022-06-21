@@ -1,8 +1,19 @@
 <?php
 
-# github crons run on UTC
+/*
+CLI tool to echo workflow yml with a scheduled cron
+params:
+- worfklow e.g. ci | standards | keepalive
+- ghrepo e.g. ${{ github.repository }}
 
-# https://crontab.guru
+Examples:
+php create_workflow.php ci silverstripe/silverstripe-admin
+php create_workflow.php keepalive silverstripe/recipe-cms
+
+Notes:
+- github crons run on UTC
+- https://crontab.guru/ is useful to translate a cron to english
+*/
 
 const MON = 1;
 const TUE = 2;
@@ -15,6 +26,24 @@ const DAILY = 99;
 
 // ci | keepalive | standards
 global $mode;
+
+global $ghrepoToCron;
+$ghrepoToCron = [
+    'ci' => [],
+    'standards' => [],
+    'keepalive' => []
+];
+
+function createWorkflow($workflow, $ghrepo) {
+    $str = file_get_contents("workflows/$workflow.yml");
+    $cron = getCron($workflow, $ghrepo);
+    return str_replace('<cron>', $cron, $str);
+}
+
+function getCron($workflow, $ghrepo) {
+    global $ghrepoToCron;
+    return $ghrepoToCron[$workflow][$ghrepo] ?? $ghrepoToCron[$workflow]['fallback'];
+}
 
 function cron($hourStrNZT, $day) {
     // e.g. NZST of '11pm', SAT
@@ -231,31 +260,42 @@ $crons = [
 ];
 
 $mode = 'ci';
-$ghrepoToCiCron = [];
 foreach ($crons as $cron => $ghrepos) {
     $minute = 0;
     foreach ($ghrepos as $ghrepo) {
-        $ghrepoToCron[$ghrepo] = preg_replace('/^[0-9]+ /', "$minute ", $cron);
+        $ghrepoToCron[$mode][$ghrepo] = preg_replace('/^[0-9]+ /', "$minute ", $cron);
         $minute += 10;
     }
 }
 
 $mode = 'standards';
-$ghrepoToStandardsCron = [];
 foreach ($crons as $cron => $ghrepos) {
     foreach ($ghrepos as $ghrepo) {
         $day = ghrepoToDay($ghrepo);
         // run on the 50th minute of an hour sometime between the 1st and the 28th of each month
-        $ghrepoToStandardsCron[$ghrepo] = preg_replace('/^0 ([0-9]+) 1 /', "55 $1 $day ", $cron);
+        $ghrepoToCron[$mode][$ghrepo] = preg_replace('/^0 ([0-9]+) 1 /', "55 $1 $day ", $cron);
     }
 }
 
 $mode = 'keepalive';
-$ghrepoToKeepaliveCron = [];
 foreach ($crons as $cron => $ghrepos) {
     foreach ($ghrepos as $ghrepo) {
         $day = ghrepoToDay($ghrepo);
         // run on the 55th minute of an hour sometime between the 1st and the 28th of each month
-        $ghrepoToKeepaliveCron[$ghrepo] = preg_replace('/^0 ([0-9]+) 1 /', "50 $1 $day ", $cron);
+        $ghrepoToCron[$mode][$ghrepo] = preg_replace('/^0 ([0-9]+) 1 /', "50 $1 $day ", $cron);
     }
 }
+
+$workflow = $argv[1] ?? '';
+if (!in_array($workflow, ['ci', 'standards', 'keepalive'])) {
+    echo "Undefined worflow $workflow\n";
+    exit(1);
+}
+
+$ghrepo = $argv[2] ?? '';
+if (!preg_match('#[a-zA-Z0-9\-]/[a-zA-Z0-9\-]#', $ghrepo)) {
+    echo "Invalid ghrepo $ghrepo";
+    exit(1);
+}
+
+echo createWorkflow($workflow, $ghrepo);
