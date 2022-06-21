@@ -1,5 +1,5 @@
 name: Standards
-description: Keeps modules up to the latest standards
+description: Keeps modules up to date with the latest standards
 
 runs:
   using: composite
@@ -27,6 +27,35 @@ runs:
         fi
         echo "git diff found changes"
 
-    - name: Pull-request
-      uses: silverstripe/pull-request@v1
-      
+    - name: Remove any old branches
+      shell: bash
+      env:
+        GITHUB_REPOSITORY: ${{ github.repository }}
+      run: |
+        JSON=$(curl https://api.github.com/repos/$GITHUB_REPOSITORY/branches)
+        BRANCHES=$(echo $JSON | jq -r '.[] | .name | select(.|test("^pulls\/[0-9]\/standards-[0-9]{10}$"))')
+        for BRANCH in $BRANCHES; do
+          if [[ "$BRANCH" =~ ^pulls/[0-9\.]+/update\-js\-[0-9]+$ ]]; then
+            git push origin --delete "$BRANCH"
+            echo "Deleted old branch $BRANCH"
+          fi
+        done
+
+    - name: Generate branch name
+      id: generate-branch-name
+      shell: bash
+      env:
+        GITHUB_REF: ${{ github.ref }}
+      run: |
+        # Convert refs/heads/mybranch to mybranch
+        CUT=$(echo $GITHUB_REF | cut -c 12-)
+        # e.g. pulls/1/standards-1647810133
+        BRANCH=pulls/$CUT/standards-$(date +%s)
+        echo ::set-output name=branch::$BRANCH
+
+    - name: Create pull-request
+      uses: silverstripe/gha-pull-request@v1
+      with:
+        branch: ${{ steps.generate-branch-name.outputs.branch }}
+        title: MNT Update standards
+        description: Automated standards
