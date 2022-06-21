@@ -212,14 +212,14 @@ class WorkflowCreator
         }
         foreach ($this->createCrons('standards') as $cron => $ghrepos) {
             foreach ($ghrepos as $ghrepo) {
-                $day = ghrepoToDay($ghrepo);
+                $day = $this->ghrepoToDay($ghrepo);
                 // run on the 50th minute of an hour sometime between the 1st and the 28th of each month
                 $this->ghrepoToCron['standards'][$ghrepo] = preg_replace('/^0 ([0-9]+) 1 /', "55 $1 $day ", $cron);
             }
         }
         foreach ($this->createCrons('keepalive') as $cron => $ghrepos) {
             foreach ($ghrepos as $ghrepo) {
-                $day = ghrepoToDay($ghrepo);
+                $day = $this->ghrepoToDay($ghrepo);
                 // run on the 55th minute of an hour sometime between the 1st and the 28th of each month
                 $this->ghrepoToCron['keepalive'][$ghrepo] = preg_replace('/^0 ([0-9]+) 1 /', "50 $1 $day ", $cron);
             }
