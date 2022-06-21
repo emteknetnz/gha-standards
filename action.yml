@@ -1,6 +1,15 @@
 name: Standards
 description: Keeps modules up to date with the latest standards
 
+# ! [remote rejected] pulls/1/standards-1655812934 -> pulls/1/standards-1655812934 (refusing to allow a GitHub App to
+# create or update workflow `.github/workflows/ci.yml` without `workflows` permission)
+
+# :-[ ^ we need to use a PAT (personal access token) with the 'workflow - Update GitHub Action workflows ' checkbox
+# ticked, and then add this token to every repo, which obviously is not going to happen
+
+
+# TODO: when updating ci.yml - it needs to read existing ci.yml and retain the 'with' options
+
 runs:
   using: composite
   steps:
