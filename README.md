@@ -2,6 +2,10 @@
 
 GitHub Action - Keeps module up to standard doing tasks such as ensuring workflow files are up to date.
 
+# Superceeded
+
+[module-standardiser](https://github.com/emteknetnz/module-standardiser)
+
 # This will not work for updating workflow files
 
 ```
